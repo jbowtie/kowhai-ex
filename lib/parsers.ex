@@ -29,7 +29,7 @@ defmodule Parsers do
       tail = String.slice(input, String.length(expected)..-1)
       {:ok, expected, tail}
     else
-      {:err, "expected #{expected}"}
+      {:err, "expected #{expected}", input}
     end
   end
 
@@ -37,7 +37,7 @@ defmodule Parsers do
     r = Regex.compile!("^#{expected}")
 
     case Regex.run(r, input, return: :index) do
-      nil -> {:err, "Regex #{expected} did not match"}
+      nil -> {:err, "Regex #{expected} did not match", input}
       [{0, len}] -> {:ok, String.slice(input, 0..(len - 1)), String.slice(input, len..-1)}
     end
   end
@@ -53,7 +53,7 @@ defmodule Parsers do
   def match(input, rule, exec) do
     case match(input, rule) do
       {:ok, result, tail} -> {:ok, exec.(result), tail}
-      {:err, msg} -> {:err, msg}
+      {:err, msg, loc} -> {:err, msg, loc}
     end
   end
 
@@ -123,7 +123,7 @@ defmodule Parsers do
 
     case Map.fetch(s.rules, ref) do
       {:ok, rule} -> chain(gll, input, rule, fn x -> cont.(x) end)
-      :error -> cont.({:err, "Named rule #{ref} does not exist in grammar"})
+      :error -> cont.({:err, "Named rule #{ref} does not exist in grammar", input})
     end
   end
 
@@ -165,7 +165,7 @@ defmodule Parsers do
     chain(gll, input, rule, fn x ->
       case x do
         {:ok, result, ""} -> Agent.update(success, &MapSet.put(&1, result))
-        {:err, msg} -> Agent.update(failure, &MapSet.put(&1, msg))
+        {:err, msg, _} -> Agent.update(failure, &MapSet.put(&1, msg))
         _ -> Agent.update(failure, &MapSet.put(&1, "INCOMPLETE: #{inspect(x)}"))
       end
     end)
@@ -268,6 +268,7 @@ defmodule Parsers do
     Agent.update(gll, fn _ -> news end)
   end
 
+  # everything after here is syntactic sugar for building up grammars
   def rule(grammar, name, body) do
     grammar
     |> Map.put_new(name, build(body))

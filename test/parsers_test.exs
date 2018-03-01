@@ -5,15 +5,15 @@ defmodule ParsersTest do
 
   test "literal match" do
     assert Parsers.match("abc", {:literal, "a"}) == {:ok, "a", "bc"}
-    assert Parsers.match("abc", {:literal, "b"}) == {:err, "expected b"}
+    assert Parsers.match("abc", {:literal, "b"}) == {:err, "expected b", "abc"}
   end
 
   test "regex" do
     num = {:regex, "\\d+"}
     assert Parsers.match("12a", num) == {:ok, "12", "a"}
     assert Parsers.match("12a", num, &String.to_integer/1) == {:ok, 12, "a"}
-    assert Parsers.match("a12", num) == {:err, "Regex \\d+ did not match"}
-    assert Parsers.match("a12", num, &String.to_integer/1) == {:err, "Regex \\d+ did not match"}
+    assert Parsers.match("a12", num) == {:err, "Regex \\d+ did not match", "a12"}
+    assert Parsers.match("a12", num, &String.to_integer/1) == {:err, "Regex \\d+ did not match", "a12"}
   end
 
   test "OR parser" do
@@ -125,9 +125,7 @@ defmodule ParsersTest do
 
   @tag :torture
   test "highly ambiguous grammar" do
-    # S ::= S S S
-    #       | S S
-    #       | a
+    # S ::= S S S | S S | a
     grammar =
       Map.new()
       |> rule("S", [ref("S"), ref("S"), ref("S")] <|> [ref("S"), ref("S")] <|> "a")
