@@ -194,13 +194,17 @@ defmodule Parsers do
 
     case MapSet.size(s) do
       1 ->
+        # only one success
         {:ok, MapSet.to_list(s) |> Enum.at(0)}
 
       0 ->
+        # no successes, return all the errors
+        # assume client will choose which to display
         e = Agent.get(failure, & &1)
         {:err, MapSet.to_list(e)}
 
       _ ->
+        # ambiguous, return all so client can choose one
         {:ambiguous, MapSet.to_list(s)}
     end
   end

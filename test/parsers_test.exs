@@ -175,6 +175,20 @@ defmodule ParsersTest do
     assert 14 == output2
   end
 
+  test "ambiguous rule" do
+    # S ::= 2 | \d+
+    grammar =
+      Map.new()
+      |> rule("S1", "2")
+      |> rule("S2", ~r/\d/ <<~ &String.to_integer/1)
+      |> rule("S", ref("S1") <|> ref("S2"))
+      |> rule("__START__", ref("S"))
+
+    input = "2"
+
+    assert {:ambiguous, [2, "2"]} == Parsers.parse(input, grammar)
+  end
+
   @tag :torture
   test "highly ambiguous grammar" do
     # S ::= S S S | S S | a
