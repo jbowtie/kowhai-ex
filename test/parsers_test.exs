@@ -103,6 +103,10 @@ defmodule ParsersTest do
   test "compose parsers" do
     # literal
     assert {:literal, "a"} == rule("a")
+    # regex
+    assert {:regex, "a"} == rule(~r/a/)
+    # rule
+    assert {:rule, "a"} == ref("a")
     # sequence
     assert {:seq, [{:literal, "a"}, {:literal, "b"}]} == rule(["a", "b"])
     # a OR b
