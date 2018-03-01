@@ -21,13 +21,13 @@ defmodule ParsersTest do
   test "literal eval" do
     a = rule("1") <<~ &String.to_integer/1
     assert {:literal, "1", &String.to_integer/1} == a
-    assert {:ok, [1]} == Parsers.parse("1", a)
+    assert {:ok, 1} == Parsers.parse("1", a)
   end
 
   test "regex eval" do
     a = rule(~r/\d+/) <<~ &String.to_integer/1
     assert {:regex, "\\d+", &String.to_integer/1} == a
-    assert {:ok, [123]} == Parsers.parse("123", a)
+    assert {:ok, 123} == Parsers.parse("123", a)
   end
 
   test "OR parser" do
@@ -35,14 +35,14 @@ defmodule ParsersTest do
     b = {:literal, "b"}
     c = {:literal, "c"}
     abc = {:or, [a, b, c]}
-    assert {:ok, ["c"]} == Parsers.parse("c", abc)
+    assert {:ok, "c"} == Parsers.parse("c", abc)
     assert {:err, ["expected a", "expected b", "expected c"]} == Parsers.parse("d", abc)
   end
 
   test "parse degenerate SEQ (one value)" do
     a = {:literal, "a"}
     x = {:seq, [a]}
-    assert {:ok, ["a"]} == Parsers.parse("a", x)
+    assert {:ok, "a"} == Parsers.parse("a", x)
     assert {:err, ["expected a"]} == Parsers.parse("c", x)
   end
 
@@ -51,7 +51,7 @@ defmodule ParsersTest do
     b = {:literal, "b"}
     c = {:literal, "c"}
     x = {:seq, [a, b, c]}
-    assert {:ok, [["a", "b", "c"]]} == Parsers.parse("abc", x)
+    assert {:ok, ["a", "b", "c"]} == Parsers.parse("abc", x)
   end
 
   test "Combined SEQ and OR parsers" do
@@ -62,9 +62,9 @@ defmodule ParsersTest do
     ab = {:or, [a, b]}
     cd = {:or, [c, d]}
     x = {:seq, [ab, cd]}
-    assert {:ok, [["b", "d"]]} == Parsers.parse("bd", x)
+    assert {:ok, ["b", "d"]} == Parsers.parse("bd", x)
     x = {:seq, [a, b, cd]}
-    assert {:ok, [["a", "b", "c"]]} == Parsers.parse("abc", x)
+    assert {:ok, ["a", "b", "c"]} == Parsers.parse("abc", x)
   end
 
   test "named productions" do
@@ -74,7 +74,7 @@ defmodule ParsersTest do
       |> rule("S2", ["b", "c"])
 
     # uses a named rule for the top level
-    assert {:ok, [["b", "c"]]} == Parsers.parse("bc", grammar, "S2")
+    assert {:ok, ["b", "c"]} == Parsers.parse("bc", grammar, "S2")
   end
 
   test "anon rule referencing named rule" do
@@ -86,7 +86,7 @@ defmodule ParsersTest do
     # create an anonymous rule
     x = rule(["a", ref("S2")])
     # uses the anon rule for our top level
-    assert {:ok, [["a", ["b", "c"]]]} == Parsers.parse("abc", grammar, x)
+    assert {:ok, ["a", ["b", "c"]]} == Parsers.parse("abc", grammar, x)
   end
 
   test "special start rule" do
@@ -97,7 +97,7 @@ defmodule ParsersTest do
       |> rule("__START__", ref("BC"))
 
     # uses a named rule for the top level
-    assert {:ok, [["b", "c"]]} == Parsers.parse("bc", grammar)
+    assert {:ok, ["b", "c"]} == Parsers.parse("bc", grammar)
   end
 
   test "compose parsers" do
@@ -121,7 +121,7 @@ defmodule ParsersTest do
     input = "aaaa"
     # IO.inspect grammar
 
-    assert {:ok, [[[["a", "a"], "a"], "a"]]} == Parsers.parse(input, grammar)
+    assert {:ok, [[["a", "a"], "a"], "a"]} == Parsers.parse(input, grammar)
   end
 
   test "right recursive rule" do
@@ -134,10 +134,12 @@ defmodule ParsersTest do
     input = "aaaa"
     # IO.inspect grammar
 
-    assert {:ok, [["a", ["a", ["a", "a"]]]]} == Parsers.parse(input, grammar)
+    assert {:ok, ["a", ["a", ["a", "a"]]]} == Parsers.parse(input, grammar)
   end
 
   test "simple calculator grammar" do
+    # sumexpr := expr +|- expr
+    # expr := (number *|/ number) | number
     grammar =
       Map.new()
       |> rule("Number", ~r/\d+/ <<~ &String.to_integer/1)
@@ -166,11 +168,11 @@ defmodule ParsersTest do
 
     input = "2+3"
     {:ok, output} = Parsers.parse(input, grammar)
-    assert [5] == output
+    assert 5 == output
 
     input2 = "2+3*4"
     {:ok, output2} = Parsers.parse(input2, grammar)
-    assert [14] == output2
+    assert 14 == output2
   end
 
   @tag :torture
@@ -184,6 +186,6 @@ defmodule ParsersTest do
     input = "aaaaaaaaaaa"
     # IO.inspect grammar
 
-    assert {:ok, [["a", "a"]]} == Parsers.parse(input, grammar)
+    assert {:ok, ["a", "a"]} == Parsers.parse(input, grammar)
   end
 end

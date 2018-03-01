@@ -192,11 +192,16 @@ defmodule Parsers do
     run(gll)
     s = Agent.get(success, & &1)
 
-    if MapSet.size(s) > 0 do
-      {:ok, MapSet.to_list(s)}
-    else
-      e = Agent.get(failure, & &1)
-      {:err, MapSet.to_list(e)}
+    case MapSet.size(s) do
+      1 ->
+        {:ok, MapSet.to_list(s) |> Enum.at(0)}
+
+      0 ->
+        e = Agent.get(failure, & &1)
+        {:err, MapSet.to_list(e)}
+
+      _ ->
+        {:ambiguous, MapSet.to_list(s)}
     end
   end
 
