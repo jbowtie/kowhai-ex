@@ -13,7 +13,21 @@ defmodule ParsersTest do
     assert Parsers.match("12a", num) == {:ok, "12", "a"}
     assert Parsers.match("12a", num, &String.to_integer/1) == {:ok, 12, "a"}
     assert Parsers.match("a12", num) == {:err, "Regex \\d+ did not match", "a12"}
-    assert Parsers.match("a12", num, &String.to_integer/1) == {:err, "Regex \\d+ did not match", "a12"}
+
+    assert Parsers.match("a12", num, &String.to_integer/1) ==
+             {:err, "Regex \\d+ did not match", "a12"}
+  end
+
+  test "literal eval" do
+    a = rule("1") <<~ &String.to_integer/1
+    assert {:literal, "1", &String.to_integer/1} == a
+    assert {:ok, [1]} == Parsers.parse("1", a)
+  end
+
+  test "regex eval" do
+    a = rule(~r/\d+/) <<~ &String.to_integer/1
+    assert {:regex, "\\d+", &String.to_integer/1} == a
+    assert {:ok, [123]} == Parsers.parse("123", a)
   end
 
   test "OR parser" do
@@ -121,6 +135,42 @@ defmodule ParsersTest do
     # IO.inspect grammar
 
     assert {:ok, [["a", ["a", ["a", "a"]]]]} == Parsers.parse(input, grammar)
+  end
+
+  test "simple calculator grammar" do
+    grammar =
+      Map.new()
+      |> rule("Number", ~r/\d+/ <<~ &String.to_integer/1)
+      |> rule(
+        "sumexpr",
+        [ref("expr"), "+" <|> "-", ref("expr")]
+        <<~ fn [x, op, y] ->
+          case op do
+            "+" -> x + y
+            "-" -> x - y
+          end
+        end
+      )
+      |> rule(
+        "expr",
+        [ref("Number"), "*" <|> "/", ref("Number")]
+        <<~ fn [x, op, y] ->
+          case op do
+            "*" -> x * y
+            "/" -> x / y
+          end
+        end
+        <|> ref("Number")
+      )
+      |> rule("__START__", ref("sumexpr"))
+
+    input = "2+3"
+    {:ok, output} = Parsers.parse(input, grammar)
+    assert [5] == output
+
+    input2 = "2+3*4"
+    {:ok, output2} = Parsers.parse(input2, grammar)
+    assert [14] == output2
   end
 
   @tag :torture

@@ -14,7 +14,7 @@ defmodule Parsers do
   """
   defmacro __using__(_opts) do
     quote do
-      import Parsers, only: [<|>: 2, rule: 3, rule: 1, ref: 1]
+      import Parsers, only: [<|>: 2, <<~: 2, rule: 3, rule: 1, ref: 1]
     end
   end
 
@@ -50,11 +50,30 @@ defmodule Parsers do
     matchLiteral(input, expected)
   end
 
+  def match(input, {op, rule, exec}) do
+    case match(input, {op, rule}) do
+      {:ok, result, tail} -> {:ok, exec.(result), tail}
+      {:err, msg, loc} -> {:err, msg, loc}
+    end
+  end
+
   def match(input, rule, exec) do
     case match(input, rule) do
       {:ok, result, tail} -> {:ok, exec.(result), tail}
       {:err, msg, loc} -> {:err, msg, loc}
     end
+  end
+
+  def chain(gll, input, {op, rule, exec}, cont) do
+    chain(gll, input, {op, rule}, fn x ->
+      res =
+        case x do
+          {:ok, result, tail} -> {:ok, exec.(result), tail}
+          {:err, msg, loc} -> {:err, msg, loc}
+        end
+
+      cont.(res)
+    end)
   end
 
   # each of these should take a function called [cont]
@@ -293,6 +312,11 @@ defmodule Parsers do
     {:or, [build(x), build(y)]}
   end
 
+  # parser <<~ eval function
+  def x <<~ y do
+    build(x) |> add_eval(y)
+  end
+
   # list becomes seq parser
   defp build(list) when is_list(list) do
     parsers =
@@ -303,12 +327,24 @@ defmodule Parsers do
   end
 
   # handles case where already expanded
+  defp build({op, rule, eval}) do
+    {op, rule, eval}
+  end
+
   defp build({op, rule}) do
     {op, rule}
+  end
+
+  defp build(a = %Regex{}) do
+    {:regex, a.source}
   end
 
   # otherwise literal
   defp build(a) do
     {:literal, a}
+  end
+
+  defp add_eval({op, rule}, eval) do
+    {op, rule, eval}
   end
 end
