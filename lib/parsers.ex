@@ -20,12 +20,12 @@ defmodule Parsers do
   end
 
   # match nil / epsilon rule
-  def matchLiteral(input, nil) do
+  defp matchLiteral(input, nil) do
     {:ok, :ignore, input}
   end
 
   # match a literal string
-  def matchLiteral(input, expected) do
+  defp matchLiteral(input, expected) do
     if String.starts_with?(input, expected) do
       tail = String.slice(input, String.length(expected)..-1)
       {:ok, expected, tail}
@@ -34,7 +34,7 @@ defmodule Parsers do
     end
   end
 
-  def matchRegex(input, expected) do
+  defp matchRegex(input, expected) do
     r = Regex.compile!("^#{expected}")
 
     case Regex.run(r, input, return: :index) do
@@ -65,7 +65,7 @@ defmodule Parsers do
     end
   end
 
-  def chain(gll, input, {op, rule, exec}, cont) do
+  defp chain(gll, input, {op, rule, exec}, cont) do
     chain(gll, input, {op, rule}, fn x ->
       res =
         case x do
@@ -78,7 +78,7 @@ defmodule Parsers do
   end
 
   # each of these should take a function called [cont]
-  def chain(gll, input, {:or, expected}, cont) do
+  defp chain(gll, input, {:or, expected}, cont) do
     # keep list of results
     {:ok, results} = Agent.start(fn -> MapSet.new() end)
     # for each p in expected:
@@ -96,12 +96,12 @@ defmodule Parsers do
   end
 
   # handle (presumably degenerate) sequence of single value
-  def chain(gll, input, {:seq, [left]}, cont) do
+  defp chain(gll, input, {:seq, [left]}, cont) do
     chain(gll, input, left, fn x -> cont.(x) end)
   end
 
   # handle sequence of two values
-  def chain(gll, input, {:seq, [left, right]}, cont) do
+  defp chain(gll, input, {:seq, [left, right]}, cont) do
     chain(gll, input, left, fn x ->
       case x do
         {:ok, :ignore, remainder} ->
@@ -129,7 +129,7 @@ defmodule Parsers do
   end
 
   # handle sequence of 3 or more values
-  def chain(gll, input, {:seq, [head | tail]}, cont) do
+  defp chain(gll, input, {:seq, [head | tail]}, cont) do
     # TODO: should be able to rewrite as reduce_while
     chain(gll, input, head, fn x ->
       case x do
@@ -158,7 +158,7 @@ defmodule Parsers do
   end
 
   # named non-terminals allow recursive definitions
-  def chain(gll, input, {:many, rule}, cont) do
+  defp chain(gll, input, {:many, rule}, cont) do
     chain(gll, input, rule, fn x ->
       case x do
         {:ok, v1, remainder} ->
@@ -177,7 +177,7 @@ defmodule Parsers do
   end
 
   # named non-terminals allow recursive definitions
-  def chain(gll, input, {:rule, ref}, cont) do
+  defp chain(gll, input, {:rule, ref}, cont) do
     s = Agent.get(gll, & &1)
 
     case Map.fetch(s.rules, ref) do
@@ -187,12 +187,8 @@ defmodule Parsers do
   end
 
   # for terminal types (literal, regex) we can simply forward to match
-  def chain(_t, input, rule, cont) do
+  defp chain(_t, input, rule, cont) do
     cont.(match(input, rule))
-  end
-
-  def chain(_t, input, rule, exec, cont) do
-    cont.(match(input, rule, exec))
   end
 
   def parse(input, grammar) when is_map(grammar) do
@@ -249,7 +245,7 @@ defmodule Parsers do
     end
   end
 
-  def pop_stack(gll) do
+  defp pop_stack(gll) do
     state = Agent.get(gll, & &1)
 
     if length(state.stack) > 0 do
@@ -300,7 +296,7 @@ defmodule Parsers do
     end
   end
 
-  def add(gll, parser, input, cb) do
+  defp add(gll, parser, input, cb) do
     state = Agent.get(gll, & &1)
     key = {parser, input}
     # backlinks[{input, parser}] append cont

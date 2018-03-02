@@ -19,13 +19,13 @@ defmodule ParsersTest do
   end
 
   test "literal eval" do
-    a = rule("1") <<~ &String.to_integer/1
+    a = "1" <<~ &String.to_integer/1
     assert {:literal, "1", &String.to_integer/1} == a
     assert {:ok, 1} == Parsers.parse("1", a)
   end
 
   test "regex eval" do
-    a = rule(~r/\d+/) <<~ &String.to_integer/1
+    a = ~r/\d+/ <<~ &String.to_integer/1
     assert {:regex, "\\d+", &String.to_integer/1} == a
     assert {:ok, 123} == Parsers.parse("123", a)
   end
@@ -35,6 +35,8 @@ defmodule ParsersTest do
     b = {:literal, "b"}
     c = {:literal, "c"}
     abc = {:or, [a, b, c]}
+    # check expansion of custom grammar
+    assert "a" <|> "b" <|> "c" == abc
     assert {:ok, "c"} == Parsers.parse("c", abc)
     assert {:err, ["expected a", "expected b", "expected c"]} == Parsers.parse("d", abc)
   end
@@ -244,17 +246,32 @@ defmodule ParsersTest do
     assert {:ambiguous, [2, "2"]} == Parsers.parse(input, grammar)
   end
 
+  test "ambiguous grammar" do
+    # S ::= S S a | S a | a
+    grammar =
+      Map.new()
+      |> rule("S", [ref("S"), ref("S"), "a"] <|> [ref("S"), "a"] <|> "a")
+      |> rule("__START__", ref("S"))
+
+    input = "aaaaa"
+
+    assert {:ok, [[[["a", "a"], "a"], "a"], "a"]} == Parsers.parse(input, grammar)
+  end
+
   @tag :torture
   test "highly ambiguous grammar" do
+    # this *should* work (see sigma-2 in GLL paper(
+    # resolves as incomplete (instead of infinite loop)
+    # which is only half-reasonable
     # S ::= S S S | S S | a
     grammar =
       Map.new()
       |> rule("S", [ref("S"), ref("S"), ref("S")] <|> [ref("S"), ref("S")] <|> "a")
       |> rule("__START__", ref("S"))
 
-    input = "aaaaaaaaaaa"
+    input = "aaaaa"
     # IO.inspect grammar
 
-    assert {:ok, ["a", "a"]} == Parsers.parse(input, grammar)
+    assert {:ok, [[[["a", "a"], "a"], "a"], "a"]} == Parsers.parse(input, grammar)
   end
 end
