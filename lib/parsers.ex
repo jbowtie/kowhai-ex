@@ -14,13 +14,13 @@ defmodule Parsers do
   """
   defmacro __using__(_opts) do
     quote do
-      import Parsers, only: [<|>: 2, <<~: 2, rule: 3, rule: 1, ref: 1, skip: 1]
+      import Parsers, only: [<|>: 2, <<~: 2, rule: 3, rule: 1, ref: 1, skip: 1, optional: 1]
     end
   end
 
   # match nil / epsilon rule
   def matchLiteral(input, nil) do
-    {:ok, nil, input}
+    {:ok, :ignore, input}
   end
 
   # match a literal string
@@ -346,6 +346,13 @@ defmodule Parsers do
 
   def skip(x) do
     x <<~ fn _ -> :ignore end
+  end
+
+  # hmmm...
+  # want to convert :err to :ok when optional?
+  # or want to <|> with nil rule
+  def optional(x) do
+    build(x) <|> {:literal, nil}
   end
 
   # list becomes seq parser

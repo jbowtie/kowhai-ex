@@ -61,10 +61,27 @@ defmodule ParsersTest do
     x = {:seq, [a, b, c]}
     assert {:ok, ["a", "c"]} == Parsers.parse("abc", x)
     whitespace = skip(~r/\s+/)
+    # skip middle
     x = {:seq, [a, whitespace, c]}
     assert {:ok, ["a", "c"]} == Parsers.parse("a   c", x)
+    #skip left
     x = {:seq, [whitespace, c]}
     assert {:ok, ["c"]} == Parsers.parse("   c", x)
+    #skip right
+    x = {:seq, [a, whitespace]}
+    assert {:ok, ["a"]} == Parsers.parse("a   ", x)
+    #skip all
+    x = {:seq, [skip(a), skip(c)]}
+    assert {:ok, []} == Parsers.parse("ac", x)
+  end
+
+  test "optional productions" do
+    a = {:literal, "a"}
+    b = optional("b")
+    c = {:literal, "c"}
+    x = {:seq, [a, b, c]}
+    assert {:ok, ["a", "b", "c"]} == Parsers.parse("abc", x)
+    assert {:ok, ["a", "c"]} == Parsers.parse("ac", x)
   end
 
   test "Combined SEQ and OR parsers" do
