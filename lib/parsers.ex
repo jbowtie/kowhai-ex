@@ -229,7 +229,7 @@ defmodule Parsers do
       end
     end)
 
-    run(gll)
+    pop_stack(gll)
     s = Agent.get(success, & &1)
 
     case MapSet.size(s) do
@@ -247,16 +247,6 @@ defmodule Parsers do
         # ambiguous, return all so client can choose one
         {:ambiguous, MapSet.to_list(s)}
     end
-  end
-
-  def run(gll) do
-    # state = Agent.get(gll, &(&1))
-    # IO.puts "BEFORE RUN: #{inspect state}"
-    pop_stack(gll)
-    # state = Agent.get(gll, &(&1))
-    # if Map.has_key?(state.rules, "__START__") do
-    # IO.puts "AFTER RUN: #{inspect state}"
-    # end
   end
 
   def pop_stack(gll) do
