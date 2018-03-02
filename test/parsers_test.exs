@@ -54,6 +54,19 @@ defmodule ParsersTest do
     assert {:ok, ["a", "b", "c"]} == Parsers.parse("abc", x)
   end
 
+  test "drop ignored productions" do
+    a = {:literal, "a"}
+    b = {:literal, "b"} <<~ fn _ -> :ignore end
+    c = {:literal, "c"}
+    x = {:seq, [a, b, c]}
+    assert {:ok, ["a", "c"]} == Parsers.parse("abc", x)
+    whitespace = skip(~r/\s+/)
+    x = {:seq, [a, whitespace, c]}
+    assert {:ok, ["a", "c"]} == Parsers.parse("a   c", x)
+    x = {:seq, [whitespace, c]}
+    assert {:ok, ["c"]} == Parsers.parse("   c", x)
+  end
+
   test "Combined SEQ and OR parsers" do
     a = {:literal, "a"}
     b = {:literal, "b"}

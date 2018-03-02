@@ -14,7 +14,7 @@ defmodule Parsers do
   """
   defmacro __using__(_opts) do
     quote do
-      import Parsers, only: [<|>: 2, <<~: 2, rule: 3, rule: 1, ref: 1]
+      import Parsers, only: [<|>: 2, <<~: 2, rule: 3, rule: 1, ref: 1, skip: 1]
     end
   end
 
@@ -103,9 +103,18 @@ defmodule Parsers do
   def chain(gll, input, {:seq, [left, right]}, cont) do
     chain(gll, input, left, fn x ->
       case x do
+        {:ok, :ignore, remainder} ->
+          chain(gll, remainder, right, fn y ->
+            case y do
+              {:ok, :ignore, rt} -> cont.({:ok, [], rt})
+              {:ok, v2, tail} -> cont.({:ok, [v2], tail})
+              _ -> cont.(y)
+            end
+          end)
         {:ok, v1, remainder} ->
           chain(gll, remainder, right, fn y ->
             case y do
+              {:ok, :ignore, rt} -> cont.({:ok, [v1], rt})
               {:ok, v2, tail} -> cont.({:ok, [v1, v2], tail})
               _ -> cont.(y)
             end
@@ -122,9 +131,18 @@ defmodule Parsers do
     # TODO: should be able to rewrite as reduce_while
     chain(gll, input, head, fn x ->
       case x do
+        {:ok, :ignore, remainder} ->
+          chain(gll, remainder, {:seq, tail}, fn y ->
+            case y do
+              {:ok, :ignore, rt} -> cont.({:ok, [], rt})
+              {:ok, v2, rt} -> cont.({:ok, [v2], rt})
+              _ -> cont.(y)
+            end
+          end)
         {:ok, v1, remainder} ->
           chain(gll, remainder, {:seq, tail}, fn y ->
             case y do
+              {:ok, :ignore, rt} -> cont.({:ok, [v1 | []], rt})
               {:ok, v2, rt} -> cont.({:ok, [v1 | v2], rt})
               _ -> cont.(y)
             end
@@ -326,6 +344,10 @@ defmodule Parsers do
     build(x) |> add_eval(y)
   end
 
+  def skip(x) do
+    x <<~ fn _ -> :ignore end
+  end
+
   # list becomes seq parser
   defp build(list) when is_list(list) do
     parsers =
@@ -356,4 +378,5 @@ defmodule Parsers do
   defp add_eval({op, rule}, eval) do
     {op, rule, eval}
   end
+
 end
