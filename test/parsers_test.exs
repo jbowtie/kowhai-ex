@@ -64,13 +64,13 @@ defmodule ParsersTest do
     # skip middle
     x = {:seq, [a, whitespace, c]}
     assert {:ok, ["a", "c"]} == Parsers.parse("a   c", x)
-    #skip left
+    # skip left
     x = {:seq, [whitespace, c]}
     assert {:ok, ["c"]} == Parsers.parse("   c", x)
-    #skip right
+    # skip right
     x = {:seq, [a, whitespace]}
     assert {:ok, ["a"]} == Parsers.parse("a   ", x)
-    #skip all
+    # skip all
     x = {:seq, [skip(a), skip(c)]}
     assert {:ok, []} == Parsers.parse("ac", x)
   end
@@ -169,6 +169,27 @@ defmodule ParsersTest do
     # IO.inspect grammar
 
     assert {:ok, ["a", ["a", ["a", "a"]]]} == Parsers.parse(input, grammar)
+  end
+
+  test "one-or-more productions" do
+    a = {:literal, "a"}
+    b = {:many, {:literal, "b"}}
+    x = {:seq, [a, b]}
+    # check that many expands to same struct
+    assert b == many("b")
+    assert {:ok, ["a", "b"]} == Parsers.parse("ab", x)
+    assert {:ok, ["a", ["b", "b"]]} == Parsers.parse("abb", x)
+    assert {:ok, ["a", ["b", "b", "b"]]} == Parsers.parse("abbb", x)
+    assert {:err, ["expected b"]} == Parsers.parse("a", x)
+  end
+
+  test "zero-or-more productions" do
+    a = {:literal, "a"}
+    b = "b" |> many |> optional
+    x = {:seq, [a, b]}
+    assert {:ok, ["a", "b"]} == Parsers.parse("ab", x)
+    assert {:ok, ["a", ["b", "b", "b"]]} == Parsers.parse("abbb", x)
+    assert {:ok, ["a"]} == Parsers.parse("a", x)
   end
 
   test "simple calculator grammar" do

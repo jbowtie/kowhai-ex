@@ -14,7 +14,8 @@ defmodule Parsers do
   """
   defmacro __using__(_opts) do
     quote do
-      import Parsers, only: [<|>: 2, <<~: 2, rule: 3, rule: 1, ref: 1, skip: 1, optional: 1]
+      import Parsers,
+        only: [<|>: 2, <<~: 2, rule: 3, rule: 1, ref: 1, skip: 1, optional: 1, many: 1]
     end
   end
 
@@ -111,6 +112,7 @@ defmodule Parsers do
               _ -> cont.(y)
             end
           end)
+
         {:ok, v1, remainder} ->
           chain(gll, remainder, right, fn y ->
             case y do
@@ -139,12 +141,32 @@ defmodule Parsers do
               _ -> cont.(y)
             end
           end)
+
         {:ok, v1, remainder} ->
           chain(gll, remainder, {:seq, tail}, fn y ->
             case y do
               {:ok, :ignore, rt} -> cont.({:ok, [v1 | []], rt})
               {:ok, v2, rt} -> cont.({:ok, [v1 | v2], rt})
               _ -> cont.(y)
+            end
+          end)
+
+        _ ->
+          cont.(x)
+      end
+    end)
+  end
+
+  # named non-terminals allow recursive definitions
+  def chain(gll, input, {:many, rule}, cont) do
+    chain(gll, input, rule, fn x ->
+      case x do
+        {:ok, v1, remainder} ->
+          chain(gll, remainder, {:many, rule}, fn y ->
+            case y do
+              {:ok, v2, rt} when is_list(v2) -> cont.({:ok, [v1 | v2], rt})
+              {:ok, v2, rt} -> cont.({:ok, [v1, v2], rt})
+              _ -> cont.({:ok, v1, remainder})
             end
           end)
 
@@ -348,11 +370,13 @@ defmodule Parsers do
     x <<~ fn _ -> :ignore end
   end
 
-  # hmmm...
-  # want to convert :err to :ok when optional?
-  # or want to <|> with nil rule
+  # or with the nil rule
   def optional(x) do
     build(x) <|> {:literal, nil}
+  end
+
+  def many(x) do
+    {:many, build(x)}
   end
 
   # list becomes seq parser
@@ -385,5 +409,4 @@ defmodule Parsers do
   defp add_eval({op, rule}, eval) do
     {op, rule, eval}
   end
-
 end
