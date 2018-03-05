@@ -1,7 +1,8 @@
 defmodule ParsersTest do
   use ExUnit.Case
-  doctest Parsers
-  use Parsers
+  doctest Kowhai.Parsers
+  use Kowhai.Parsers
+  alias Kowhai.Parsers
 
   test "literal match" do
     assert Parsers.match("abc", {:literal, "a"}) == {:ok, "a", "bc"}

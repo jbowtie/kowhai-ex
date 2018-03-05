@@ -1,4 +1,4 @@
-defmodule Parsers do
+defmodule Kowhai.Parsers do
   @moduledoc """
   Documentation for Parsers.
 
@@ -14,7 +14,7 @@ defmodule Parsers do
   """
   defmacro __using__(_opts) do
     quote do
-      import Parsers,
+      import Kowhai.Parsers,
         only: [<|>: 2, <<~: 2, rule: 3, rule: 1, ref: 1, skip: 1, optional: 1, many: 1]
     end
   end
