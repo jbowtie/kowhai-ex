@@ -3,11 +3,13 @@ defmodule Parsers.MixProject do
 
   def project do
     [
-      app: :parsers,
+      app: :kowhai_ex,
+      name: "KowhaiEx",
       version: "0.1.0",
       elixir: "~> 1.6",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      description: "Provides GLL-based parsers"
     ]
   end
 
