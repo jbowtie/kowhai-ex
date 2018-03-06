@@ -1,34 +1,32 @@
 defmodule ParsersTest do
   use ExUnit.Case
-  doctest Kowhai.Parsers
-  use Kowhai.Parsers
-  alias Kowhai.Parsers
+  use Kowhai
 
   test "literal match" do
-    assert Parsers.match("abc", {:literal, "a"}) == {:ok, "a", "bc"}
-    assert Parsers.match("abc", {:literal, "b"}) == {:err, "expected b", "abc"}
+    assert Kowhai.Parsers.match("abc", {:literal, "a"}) == {:ok, "a", "bc"}
+    assert Kowhai.Parsers.match("abc", {:literal, "b"}) == {:err, "expected b", "abc"}
   end
 
   test "regex" do
     num = {:regex, "\\d+"}
-    assert Parsers.match("12a", num) == {:ok, "12", "a"}
-    assert Parsers.match("12a", num, &String.to_integer/1) == {:ok, 12, "a"}
-    assert Parsers.match("a12", num) == {:err, "Regex \\d+ did not match", "a12"}
+    assert Kowhai.Parsers.match("12a", num) == {:ok, "12", "a"}
+    assert Kowhai.Parsers.match("12a", num, &String.to_integer/1) == {:ok, 12, "a"}
+    assert Kowhai.Parsers.match("a12", num) == {:err, "Regex \\d+ did not match", "a12"}
 
-    assert Parsers.match("a12", num, &String.to_integer/1) ==
+    assert Kowhai.Parsers.match("a12", num, &String.to_integer/1) ==
              {:err, "Regex \\d+ did not match", "a12"}
   end
 
   test "literal eval" do
     a = "1" <<~ &String.to_integer/1
     assert {:literal, "1", &String.to_integer/1} == a
-    assert {:ok, 1} == Parsers.parse("1", a)
+    assert {:ok, 1} == Kowhai.parse("1", a)
   end
 
   test "regex eval" do
     a = ~r/\d+/ <<~ &String.to_integer/1
     assert {:regex, "\\d+", &String.to_integer/1} == a
-    assert {:ok, 123} == Parsers.parse("123", a)
+    assert {:ok, 123} == Kowhai.parse("123", a)
   end
 
   test "OR parser" do
@@ -38,15 +36,15 @@ defmodule ParsersTest do
     abc = {:or, [a, b, c]}
     # check expansion of custom grammar
     assert "a" <|> "b" <|> "c" == abc
-    assert {:ok, "c"} == Parsers.parse("c", abc)
-    assert {:err, ["expected a", "expected b", "expected c"]} == Parsers.parse("d", abc)
+    assert {:ok, "c"} == Kowhai.parse("c", abc)
+    assert {:err, ["expected a", "expected b", "expected c"]} == Kowhai.parse("d", abc)
   end
 
   test "parse degenerate SEQ (one value)" do
     a = {:literal, "a"}
     x = {:seq, [a]}
-    assert {:ok, "a"} == Parsers.parse("a", x)
-    assert {:err, ["expected a"]} == Parsers.parse("c", x)
+    assert {:ok, "a"} == Kowhai.parse("a", x)
+    assert {:err, ["expected a"]} == Kowhai.parse("c", x)
   end
 
   test "SEQ parser" do
@@ -54,7 +52,7 @@ defmodule ParsersTest do
     b = {:literal, "b"}
     c = {:literal, "c"}
     x = {:seq, [a, b, c]}
-    assert {:ok, ["a", "b", "c"]} == Parsers.parse("abc", x)
+    assert {:ok, ["a", "b", "c"]} == Kowhai.parse("abc", x)
   end
 
   test "drop ignored productions" do
@@ -62,20 +60,20 @@ defmodule ParsersTest do
     b = {:literal, "b"} <<~ fn _ -> :ignore end
     c = {:literal, "c"}
     x = {:seq, [a, b, c]}
-    assert {:ok, ["a", "c"]} == Parsers.parse("abc", x)
+    assert {:ok, ["a", "c"]} == Kowhai.parse("abc", x)
     whitespace = skip(~r/\s+/)
     # skip middle
     x = {:seq, [a, whitespace, c]}
-    assert {:ok, ["a", "c"]} == Parsers.parse("a   c", x)
+    assert {:ok, ["a", "c"]} == Kowhai.parse("a   c", x)
     # skip left
     x = {:seq, [whitespace, c]}
-    assert {:ok, ["c"]} == Parsers.parse("   c", x)
+    assert {:ok, ["c"]} == Kowhai.parse("   c", x)
     # skip right
     x = {:seq, [a, whitespace]}
-    assert {:ok, ["a"]} == Parsers.parse("a   ", x)
+    assert {:ok, ["a"]} == Kowhai.parse("a   ", x)
     # skip all
     x = {:seq, [skip(a), skip(c)]}
-    assert {:ok, []} == Parsers.parse("ac", x)
+    assert {:ok, []} == Kowhai.parse("ac", x)
   end
 
   test "optional productions" do
@@ -83,8 +81,8 @@ defmodule ParsersTest do
     b = optional("b")
     c = {:literal, "c"}
     x = {:seq, [a, b, c]}
-    assert {:ok, ["a", "b", "c"]} == Parsers.parse("abc", x)
-    assert {:ok, ["a", "c"]} == Parsers.parse("ac", x)
+    assert {:ok, ["a", "b", "c"]} == Kowhai.parse("abc", x)
+    assert {:ok, ["a", "c"]} == Kowhai.parse("ac", x)
   end
 
   test "Combined SEQ and OR parsers" do
@@ -95,9 +93,9 @@ defmodule ParsersTest do
     ab = {:or, [a, b]}
     cd = {:or, [c, d]}
     x = {:seq, [ab, cd]}
-    assert {:ok, ["b", "d"]} == Parsers.parse("bd", x)
+    assert {:ok, ["b", "d"]} == Kowhai.parse("bd", x)
     x = {:seq, [a, b, cd]}
-    assert {:ok, ["a", "b", "c"]} == Parsers.parse("abc", x)
+    assert {:ok, ["a", "b", "c"]} == Kowhai.parse("abc", x)
   end
 
   test "named productions" do
@@ -107,7 +105,7 @@ defmodule ParsersTest do
       |> rule("S2", ["b", "c"])
 
     # uses a named rule for the top level
-    assert {:ok, ["b", "c"]} == Parsers.parse("bc", grammar, "S2")
+    assert {:ok, ["b", "c"]} == Kowhai.parse("bc", grammar, "S2")
   end
 
   test "anon rule referencing named rule" do
@@ -119,7 +117,7 @@ defmodule ParsersTest do
     # create an anonymous rule
     x = rule(["a", ref("S2")])
     # uses the anon rule for our top level
-    assert {:ok, ["a", ["b", "c"]]} == Parsers.parse("abc", grammar, x)
+    assert {:ok, ["a", ["b", "c"]]} == Kowhai.parse("abc", grammar, x)
   end
 
   test "special start rule" do
@@ -130,7 +128,7 @@ defmodule ParsersTest do
       |> rule("__START__", ref("BC"))
 
     # uses a named rule for the top level
-    assert {:ok, ["b", "c"]} == Parsers.parse("bc", grammar)
+    assert {:ok, ["b", "c"]} == Kowhai.parse("bc", grammar)
   end
 
   test "compose parsers" do
@@ -158,7 +156,7 @@ defmodule ParsersTest do
     input = "aaaa"
     # IO.inspect grammar
 
-    assert {:ok, [[["a", "a"], "a"], "a"]} == Parsers.parse(input, grammar)
+    assert {:ok, [[["a", "a"], "a"], "a"]} == Kowhai.parse(input, grammar)
   end
 
   test "right recursive rule" do
@@ -171,7 +169,7 @@ defmodule ParsersTest do
     input = "aaaa"
     # IO.inspect grammar
 
-    assert {:ok, ["a", ["a", ["a", "a"]]]} == Parsers.parse(input, grammar)
+    assert {:ok, ["a", ["a", ["a", "a"]]]} == Kowhai.parse(input, grammar)
   end
 
   test "one-or-more productions" do
@@ -180,19 +178,19 @@ defmodule ParsersTest do
     x = {:seq, [a, b]}
     # check that many expands to same struct
     assert b == many("b")
-    assert {:ok, ["a", "b"]} == Parsers.parse("ab", x)
-    assert {:ok, ["a", ["b", "b"]]} == Parsers.parse("abb", x)
-    assert {:ok, ["a", ["b", "b", "b"]]} == Parsers.parse("abbb", x)
-    assert {:err, ["expected b"]} == Parsers.parse("a", x)
+    assert {:ok, ["a", "b"]} == Kowhai.parse("ab", x)
+    assert {:ok, ["a", ["b", "b"]]} == Kowhai.parse("abb", x)
+    assert {:ok, ["a", ["b", "b", "b"]]} == Kowhai.parse("abbb", x)
+    assert {:err, ["expected b"]} == Kowhai.parse("a", x)
   end
 
   test "zero-or-more productions" do
     a = {:literal, "a"}
     b = "b" |> many |> optional
     x = {:seq, [a, b]}
-    assert {:ok, ["a", "b"]} == Parsers.parse("ab", x)
-    assert {:ok, ["a", ["b", "b", "b"]]} == Parsers.parse("abbb", x)
-    assert {:ok, ["a"]} == Parsers.parse("a", x)
+    assert {:ok, ["a", "b"]} == Kowhai.parse("ab", x)
+    assert {:ok, ["a", ["b", "b", "b"]]} == Kowhai.parse("abbb", x)
+    assert {:ok, ["a"]} == Kowhai.parse("a", x)
   end
 
   test "simple calculator grammar" do
@@ -225,11 +223,11 @@ defmodule ParsersTest do
       |> rule("__START__", ref("sumexpr"))
 
     input = "2+3"
-    {:ok, output} = Parsers.parse(input, grammar)
+    {:ok, output} = Kowhai.parse(input, grammar)
     assert 5 == output
 
     input2 = "2+3*4"
-    {:ok, output2} = Parsers.parse(input2, grammar)
+    {:ok, output2} = Kowhai.parse(input2, grammar)
     assert 14 == output2
   end
 
@@ -244,7 +242,7 @@ defmodule ParsersTest do
 
     input = "2"
 
-    assert {:ambiguous, [2, "2"]} == Parsers.parse(input, grammar)
+    assert {:ambiguous, [2, "2"]} == Kowhai.parse(input, grammar)
   end
 
   test "ambiguous grammar" do
@@ -256,7 +254,7 @@ defmodule ParsersTest do
 
     input = "aaaaa"
 
-    assert {:ok, [[[["a", "a"], "a"], "a"], "a"]} == Parsers.parse(input, grammar)
+    assert {:ok, [[[["a", "a"], "a"], "a"], "a"]} == Kowhai.parse(input, grammar)
   end
 
   @tag :torture
@@ -273,6 +271,6 @@ defmodule ParsersTest do
     input = "aaaaa"
     # IO.inspect grammar
 
-    assert {:ok, [[[["a", "a"], "a"], "a"], "a"]} == Parsers.parse(input, grammar)
+    assert {:ok, [[[["a", "a"], "a"], "a"], "a"]} == Kowhai.parse(input, grammar)
   end
 end
