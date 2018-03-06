@@ -1,2 +1,2 @@
 ExUnit.start()
-ExUnit.configure(exclude: [torture: true])
+ExUnit.configure(exclude: [ignore: true])

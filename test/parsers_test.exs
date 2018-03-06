@@ -257,7 +257,7 @@ defmodule ParsersTest do
     assert {:ok, [[[["a", "a"], "a"], "a"], "a"]} == Kowhai.parse(input, grammar)
   end
 
-  @tag :torture
+  @tag :ignore
   test "highly ambiguous grammar" do
     # this *should* work (see sigma-2 in GLL paper(
     # resolves as incomplete (instead of infinite loop)
