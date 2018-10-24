@@ -196,6 +196,14 @@ defmodule ParsersTest do
   test "simple calculator grammar" do
     # sumexpr := expr +|- expr
     # expr := (number *|/ number) | number
+    #
+    # what do we really want to say here?
+    # defgrammar Calc do
+    #   NAME ~> rule <<~ eval_fn
+    #   expr ~> NUMBER, "*" <|> "-", NUMBER
+    #   __START__ := NAME
+    # end
+    # input |> Calc
     grammar =
       Map.new()
       |> rule("Number", ~r/\d+/ <<~ &String.to_integer/1)
@@ -259,7 +267,7 @@ defmodule ParsersTest do
 
   @tag :ignore
   test "highly ambiguous grammar" do
-    # this *should* work (see sigma-2 in GLL paper(
+    # this *should* work (see sigma-2 in GLL paper)
     # resolves as incomplete (instead of infinite loop)
     # which is only half-reasonable
     # S ::= S S S | S S | a
@@ -273,4 +281,5 @@ defmodule ParsersTest do
 
     assert {:ok, [[[["a", "a"], "a"], "a"], "a"]} == Kowhai.parse(input, grammar)
   end
+
 end

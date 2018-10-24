@@ -8,11 +8,21 @@ defmodule Kowhai do
 
   use Parsers
 
-  rule S do
-    ~ebnf/"a", S/ ^^^ parseF
+  defgrammar Calc do
+    "SUMexpr" ~> [~n{expr}, "+" <|> "-", ~n{expr}] <<~ fn([left, op, right])
+    "expr" ~> [number, "*" <|> "/", number] <<~ fn([left, op, right])
+    "__START__" ~> ~n{SUMexpr}
   end
 
+  "1+2*3" |> Calc
+  {:ok, 7}
+
   Parser.parse(S, "aaa")
+
+  add a sigil that calls ref() instead of exporting ref
+    that helps rule names stand out
+  add a defgrammar macro that defines a grammar you can pipe IOdata into and get whatever output
+  add a module that makes it easy to chain/output AST from rule
   """
   defmacro __using__(_opts) do
     quote do
